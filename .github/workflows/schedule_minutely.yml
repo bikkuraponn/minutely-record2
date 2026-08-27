@@ -1,0 +1,44 @@
+name: Minutely Record
+on:
+  repository_dispatch:
+    types: [minutely-trigger]
+concurrency:
+  group: minutely-record
+  cancel-in-progress: false
+jobs:
+  run-python:
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Verify secret
+        env:
+          RECEIVED_CRONJOB_SECRET: ${{ github.event.client_payload.secret }}
+          CRONJOB_SECRET: ${{ secrets.CRONJOB_SECRET }}
+        run: |
+          if [[ "$RECEIVED_CRONJOB_SECRET" != "$CRONJOB_SECRET" ]]; then
+            echo "Invalid secret"
+            exit 1
+          fi
+      - name: Run script
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_API_KEY2: ${{ secrets.YOUTUBE_API_KEY2 }}
+          YOUTUBE_API_KEY3: ${{ secrets.YOUTUBE_API_KEY3 }}
+          VIDEO_ID: ${{ vars.VIDEO_ID }}
+          CHANNEL_ID: ${{ vars.CHANNEL_ID }}
+          SECOND_CHANNEL_ID: ${{ vars.SECOND_CHANNEL_ID }}
+          SECOND_TOPIC_PREFIX: ${{ secrets.SECOND_TOPIC_PREFIX }}
+          TURSO_URL: ${{ secrets.TURSO_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FLASK_BASE_URL: ${{ vars.FLASK_BASE_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+        run: python record_minutely.py
